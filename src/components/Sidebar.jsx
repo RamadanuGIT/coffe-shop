@@ -39,7 +39,7 @@ const Sidebar = () => {
       {/* Sidebar */}
       <div
         className={`h-screen fixed top-0 left-0
-        w-64 bg-neutral-100 z-50
+        w-64 bg-neutral-200 z-50
         transform transition-transform duration-300 ease-in-out
         ${isOpen ? "translate-x-0" : "-translate-x-full"}
         md:translate-x-0 md:static md:block
@@ -59,12 +59,22 @@ const Sidebar = () => {
         <nav className="mt-4">
           <ul className="space-y-2">
             <li className="hover:bg-gray-300 p-4 flex items-center gap-3 cursor-pointer">
-              <MdMenuBook />
-              <span>Menu</span>
+              <Link
+                className="hover:bg-gray-300 p-4 flex items-center gap-3 cursor-pointer"
+                to="/admin/menu"
+              >
+                <FaCartShopping />
+                <p>Manage Menu</p>
+              </Link>
             </li>
             <li className="hover:bg-gray-300 p-4 flex items-center gap-3 cursor-pointer">
-              <FaCartShopping />
-              <span>Order</span>
+              <Link
+                className="hover:bg-gray-300 p-4 flex items-center gap-3 cursor-pointer"
+                to="/admin/order"
+              >
+                <FaCog />
+                <p>Manage Order</p>
+              </Link>
             </li>
             <li>
               <Link

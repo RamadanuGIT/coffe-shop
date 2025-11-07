@@ -1,5 +1,3 @@
-import Navbar from "./components/Navbar";
-import Sidebar from "./components/Sidebar";
 import Hero from "./pages/Hero";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import MainLayout from "./pages/layouts/MainLayout";
@@ -9,10 +7,14 @@ import Register from "./pages/Register";
 import Menu from "./pages/Menu";
 import Profil from "./pages/Profil";
 import Cart from "./pages/Cart";
-import AdminOrder from "./pages/Admin/AdminOrder";
+import AdminOrders from "./pages/Admin/AdminOrders";
 import AdminMenu from "./pages/Admin/AdminMenu";
 import SidebarLayout from "./pages/layouts/SidebarLayout";
 import Checkout from "./pages/Checkout";
+import PaymentPage from "./pages/PaymentPage";
+import SuccessPage from "./pages/SuccessPages";
+import OrderPage from "./pages/OrderPages";
+import OrderDetailPage from "./pages/OrderDetailPage";
 
 function App() {
   return (
@@ -26,6 +28,10 @@ function App() {
           <Route path="/profil" element={<Profil />} />
           <Route path="/cart" element={<Cart />} />
           <Route path="/checkout" element={<Checkout />} />
+          <Route path="/payment" element={<PaymentPage />} />
+          <Route path="/success" element={<SuccessPage />} />
+          <Route path="/orders" element={<OrderPage />} />
+          <Route path="/order/:id" element={<OrderDetailPage />} />
         </Route>
 
         <Route element={<AuthLayout />}>
@@ -36,7 +42,7 @@ function App() {
 
         <Route element={<SidebarLayout />}>
           <Route path="/admin/menu" element={<AdminMenu />} />
-          <Route path="/admin/order" element={<AdminOrder />} />
+          <Route path="/admin/order" element={<AdminOrders />} />
         </Route>
       </Routes>
     </BrowserRouter>

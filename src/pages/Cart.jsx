@@ -1,129 +1,216 @@
-import React, { useContext } from "react";
-import { CartContext } from "../context/CartContext";
-import { Link } from "react-router-dom";
+import React, { useEffect, useState } from "react";
+import { Link, useNavigate } from "react-router-dom";
 
 const Cart = () => {
-  const { cart, removeFromCart, increaseQty, decreaseQty } =
-    useContext(CartContext);
+  const navigate = useNavigate();
+  const [cartItems, setCartItems] = useState([]);
 
-  const total = cart.reduce((sum, item) => {
-    const price = parseInt(item.price.toString().replace(/\D/g, ""));
-    return sum + price * item.quantity;
-  }, 0);
+  useEffect(() => {
+    const token = localStorage.getItem("token");
+    if (!token) {
+      alert("Silakan login terlebih dahulu");
+      navigate("/login");
+      return;
+    }
+
+    const fetchCart = async () => {
+      try {
+        const res = await fetch("http://localhost:3000/api/cart", {
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json",
+          },
+        });
+
+        const data = await res.json();
+        if (data.success) {
+          setCartItems(data.cart.items);
+        } else {
+          alert("Gagal ambil data keranjang: " + data.error);
+        }
+      } catch (error) {
+        console.error(error);
+        alert("Gagal ambil data keranjang, cek koneksi.");
+      }
+    };
+
+    fetchCart();
+  }, [navigate]);
+
+  const total = cartItems.reduce(
+    (sum, item) => sum + item.price * item.quantity,
+    0
+  );
+
+  const formatRupiah = (angka) =>
+    new Intl.NumberFormat("id-ID", {
+      style: "currency",
+      currency: "IDR",
+      minimumFractionDigits: 0,
+    }).format(angka);
+
+  const updateQty = async (productId, quantity) => {
+    const token = localStorage.getItem("token");
+    try {
+      const res = await fetch(`http://localhost:3000/api/cart/${productId}`, {
+        method: "PUT",
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ productId, quantity }),
+      });
+
+      const data = await res.json();
+      if (data.success) {
+        setCartItems(data.cart.items);
+      } else {
+        alert("Gagal update quantity");
+      }
+    } catch (error) {
+      console.error(error);
+      alert("Error saat update quantity");
+    }
+  };
+
+  const deleteItem = async (productId) => {
+    const token = localStorage.getItem("token");
+    try {
+      const res = await fetch(`http://localhost:3000/api/cart/${productId}`, {
+        method: "DELETE",
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      const data = await res.json();
+      if (data.success) {
+        setCartItems(data.cart.items);
+      } else {
+        alert("Gagal hapus item");
+      }
+    } catch (error) {
+      console.error(error);
+      alert("Error saat hapus item");
+    }
+  };
 
   return (
-    <section>
-      <div className="min-h-screen flex flex-col items-center pt-24 bg-[#eacdbd] px-4">
-        <h1 className="font-bold text-4xl mb-4 mt-6 text-center">
-          Keranjang Kamu
-        </h1>
+    <section className="min-h-screen bg-[#eacdbd] flex flex-col items-center pt-24 px-6">
+      <h1 className="text-5xl font-serif font-bold text-[#3a2a1a] mb-4 text-center">
+        Keranjang Kamu
+      </h1>
+      <p className="text-center text-[#5c4533] mb-10 opacity-80">
+        Nikmati kemudahan berbelanja, semua pesananmu ada di sini ☕
+      </p>
 
-        <div className="w-full flex flex-col items-center">
-          <div className="grid gap-6 grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 w-full max-w-6xl">
-            {cart.length === 0 ? (
-              <p className="col-span-full text-lg text-center mt-10">
-                Keranjang Kosong
-              </p>
-            ) : (
-              cart.map((item, idx) => (
-                <div
-                  key={idx}
-                  className="bg-[#cbb2a5] rounded-2xl shadow-md p-4 flex flex-col items-center w-full hover:shadow-lg transition"
-                >
-                  <img
-                    className="w-[150px] h-[100px] object-cover rounded-2xl mb-3"
-                    src={item.img || item.image}
-                    alt={item.name}
-                  />
-                  <h3 className="font-semibold text-lg mb-2">{item.name}</h3>
+      <div className="w-full max-w-6xl">
+        {cartItems.length === 0 ? (
+          <p className="text-center text-lg mt-20 font-medium text-[#3a2a1a]">
+            Keranjang masih kosong 🍃
+          </p>
+        ) : (
+          <div className="grid gap-8 grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
+            {cartItems.map((item) => (
+              <div
+                key={item.productId}
+                className="bg-[#f5e8df] rounded-3xl shadow-md p-5 flex flex-col items-center hover:shadow-2xl transition-all duration-300 relative"
+              >
+                <img
+                  className="w-[160px] h-[120px] object-cover rounded-2xl mb-4 shadow"
+                  src={item.img}
+                  alt={item.name}
+                />
+                <h3 className="font-serif text-xl font-semibold text-[#3a2a1a] text-center mb-1">
+                  {item.name}
+                </h3>
+                <p className="text-sm italic text-[#5c4533] mb-3">
+                  {item.variant && `(${item.variant})`}
+                </p>
 
-                  <div className="flex items-center gap-2 my-2">
-                    <button
-                      onClick={() => decreaseQty(item.name)}
-                      className="bg-[#dabfb0] px-2 rounded-2xl text-white font-bold"
-                    >
-                      -
-                    </button>
-                    <span className="font-bold">{item.quantity}</span>
-                    <button
-                      onClick={() => increaseQty(item.name)}
-                      className="bg-[#dabfb0] px-2 rounded-2xl text-white font-bold"
-                    >
-                      +
-                    </button>
-                  </div>
-
-                  <p className="text-sm text-gray-700">
-                    {total.toLocaleString("id-ID", {
-                      style: "currency",
-                      currency: "IDR",
-                      minimumFractionDigits: 0,
-                    })}{" "}
-                    x {item.quantity} ={" "}
-                    {(
-                      parseInt(item.price.toString().replace(/\D/g, "")) *
-                      item.quantity
-                    ).toLocaleString("id-ID", {
-                      style: "currency",
-                      currency: "IDR",
-                      minimumFractionDigits: 0,
-                    })}
-                  </p>
-
+                <div className="flex items-center gap-3 my-2 bg-[#dabfb0]/60 px-3 py-1 rounded-full shadow-inner">
                   <button
-                    onClick={() => removeFromCart(item.name)}
-                    className="mt-2 bg-red-500 hover:bg-red-700 text-white px-4 py-1 rounded-2xl transition"
+                    onClick={() =>
+                      updateQty(
+                        item.productId,
+                        item.quantity > 1 ? item.quantity - 1 : 1
+                      )
+                    }
+                    className="bg-[#b09382] hover:bg-[#a07f6b] text-white w-8 h-8 rounded-full font-bold transition"
                   >
-                    Hapus
+                    -
+                  </button>
+                  <span className="font-bold text-[#3a2a1a] text-lg w-6 text-center">
+                    {item.quantity}
+                  </span>
+                  <button
+                    onClick={() => updateQty(item.productId, item.quantity + 1)}
+                    className="bg-[#b09382] hover:bg-[#a07f6b] text-white w-8 h-8 rounded-full font-bold transition"
+                  >
+                    +
                   </button>
                 </div>
-              ))
-            )}
-          </div>
-        </div>
 
-        {/* Total Section */}
-        {cart.length > 0 && (
-          <div className="flex flex-col items-center gap-2 px-6 py-8 w-full max-w-4xl mt-8 bg-[#cbb2a5] text-black rounded-2xl shadow">
-            <p className="font-semibold text-lg">Total price:</p>
-            <p className="font-bold text-xl text-black mb-2">
-              {total.toLocaleString("id-ID", {
-                style: "currency",
-                currency: "IDR",
-                minimumFractionDigits: 0,
-              })}
-            </p>
+                <p className="text-[#3a2a1a] text-sm mt-2">
+                  {formatRupiah(item.price)} x {item.quantity} ={" "}
+                  <b>{formatRupiah(item.price * item.quantity)}</b>
+                </p>
 
-            {/* Detail per item */}
-            <div className="w-full">
-              {cart.map((item, idx) => (
-                <div
-                  key={idx}
-                  className="flex justify-between border-b py-1 text-black"
+                <button
+                  onClick={() => deleteItem(item.productId)}
+                  className="absolute top-3 right-3 bg-red-500/80 hover:bg-red-700 text-white text-xs px-3 py-1 rounded-full transition"
                 >
-                  <span>
-                    {item.name} x {item.quantity}
-                  </span>
-                  <span>
-                    {total.toLocaleString("id-ID", {
-                      style: "currency",
-                      currency: "IDR",
-                      minimumFractionDigits: 0,
-                    })}
-                  </span>
-                </div>
-              ))}
-            </div>
-
-            <Link
-              to="/checkout"
-              className="bg-[#dabfb0] hover:bg-[#b09281] text-white font-bold px-6 py-3 rounded-full transition mt-4"
-            >
-              Checkout sekarang
-            </Link>
+                  Hapus
+                </button>
+              </div>
+            ))}
           </div>
         )}
       </div>
+
+      {cartItems.length > 0 && (
+        <div className="w-full max-w-4xl mt-16 bg-[#f5e8df] text-[#3a2a1a] rounded-3xl shadow-lg p-8 border border-[#cbb2a5]/60">
+          <h2 className="text-2xl font-serif font-bold mb-4 text-center">
+            Ringkasan Pesanan
+          </h2>
+
+          <div className="divide-y divide-[#cbb2a5]">
+            {cartItems.map((item) => (
+              <div
+                key={item.productId}
+                className="flex justify-between py-3 text-sm font-medium"
+              >
+                <span>
+                  {item.name}{" "}
+                  {item.variant && (
+                    <span className="italic text-[#5c4533]">
+                      ({item.variant})
+                    </span>
+                  )}{" "}
+                  × {item.quantity}
+                </span>
+                <span>{formatRupiah(item.price * item.quantity)}</span>
+              </div>
+            ))}
+          </div>
+
+          <div className="flex justify-between items-center mt-6 text-lg font-semibold">
+            <span>Total</span>
+            <span className="text-xl font-bold text-[#3a2a1a]">
+              {formatRupiah(total)}
+            </span>
+          </div>
+
+          <div className="flex justify-center mt-8">
+            <Link
+              to="/checkout"
+              className="bg-[#3a2a1a] hover:bg-[#5a3b22] text-white font-semibold px-10 py-3 rounded-full shadow-lg transition-transform hover:scale-105"
+            >
+              Checkout Sekarang
+            </Link>
+          </div>
+        </div>
+      )}
     </section>
   );
 };

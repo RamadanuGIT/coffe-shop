@@ -1,66 +1,97 @@
 import React, { createContext, useState, useEffect } from "react";
-import { toast } from "react-toastify";
+import { toast, Slide } from "react-toastify";
 
 export const CartContext = createContext();
 
-const CartProvider = ({ children }) => {
-  const [cart, setCart] = useState(() => {
-    try {
-      const stored = localStorage.getItem("cart");
-      return stored ? JSON.parse(stored) : [];
-    } catch {
-      localStorage.removeItem("cart");
-      return [];
-    }
-  });
+export const CartProvider = ({ children }) => {
+  const [cart, setCart] = useState([]);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    localStorage.setItem("cart", JSON.stringify(cart));
-  }, [cart]);
+    const token = localStorage.getItem("token");
+    if (!token) return setLoading(false); // kalau token gak ada, skip fetch
 
-  const addToCart = (item) => {
-    setCart((prev) => {
-      const found = prev.find((i) => i.name === item.name);
-      if (found) {
-        return prev.map((i) =>
-          i.name === item.name ? { ...i, quantity: i.quantity + 1 } : i
-        );
+    const fetchCart = async () => {
+      setLoading(true);
+      try {
+        const res = await fetch("http://localhost:3000/api/cart", {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        if (!res.ok) throw new Error(await res.text());
+        const data = await res.json();
+        if (data.success) setCart(data.cart.items || []);
+      } catch (err) {
+        console.error("Gagal fetch cart", err);
+      } finally {
+        setLoading(false);
       }
-      return [...prev, { ...item, quantity: 1 }];
-    });
-    toast.success(`${item.name} ditambahkan ke keranjang!`);
-  };
+    };
 
-  const removeFromCart = (name) => {
-    setCart((prev) => prev.filter((item) => item.name !== name));
-    toast.error("Item dihapus dari keranjang!");
-  };
+    fetchCart();
+  }, []);
 
-  const increaseQty = (name) => {
-    setCart((prev) =>
-      prev.map((item) =>
-        item.name === name ? { ...item, quantity: item.quantity + 1 } : item
-      )
-    );
-  };
+  const addToCart = async (menuItem) => {
+    const token = localStorage.getItem("token");
+    if (!token) {
+      toast.error("Silakan login terlebih dahulu", {
+        autoClose: 200,
+        hideProgressBar: true,
+        pauseOnHover: false,
+        draggable: false,
+        closeButton: false,
+        transition: Slide,
+      });
+      return;
+    }
 
-  const decreaseQty = (name) => {
-    setCart((prev) =>
-      prev
-        .map((item) =>
-          item.name === name ? { ...item, quantity: item.quantity - 1 } : item
-        )
-        .filter((item) => item.quantity > 0)
-    );
+    try {
+      const res = await fetch("http://localhost:3000/api/cart", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          productId: menuItem._id,
+          name: menuItem.name,
+          price: menuItem.price,
+          quantity: 1,
+          variant: menuItem.variant,
+          img: menuItem.img || menuItem.image || "",
+        }),
+      });
+
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Gagal tambah cart");
+
+      setCart((prev) => [...prev, { ...menuItem, quantity: 1 }]);
+      toast.success(`${menuItem.name} ditambahkan ke cart!`, {
+        autoClose: 200,
+        hideProgressBar: true,
+        pauseOnHover: false,
+        draggable: false,
+        closeButton: false,
+        transition: Slide,
+      });
+    } catch (err) {
+      console.error(err);
+      toast.error("Gagal menambahkan ke cart");
+    }
+  };
+  const clearCart = async () => {
+    const token = localStorage.getItem("token");
+    if (token) {
+      await fetch("http://localhost:3000/api/cart/clear", {
+        method: "DELETE",
+        headers: { Authorization: `Bearer ${token}` },
+      });
+    }
+    setCart([]); // update state supaya cart kosong
   };
 
   return (
-    <CartContext.Provider
-      value={{ cart, addToCart, removeFromCart, increaseQty, decreaseQty }}
-    >
+    <CartContext.Provider value={{ cart, addToCart, clearCart, loading }}>
       {children}
     </CartContext.Provider>
   );
 };
-
-export default CartProvider;
